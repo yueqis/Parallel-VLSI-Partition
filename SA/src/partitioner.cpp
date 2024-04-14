@@ -49,6 +49,8 @@ void Partitioner::parseInput(fstream& inFile)
 		_netArray[i]->addCell(cellID1);
 		_netArray[i]->addCell(cellID2);
 	}
+	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
+	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
     return;
 }
 
@@ -67,9 +69,6 @@ double Partitioner::find_bal()
 
 void Partitioner::partition()
 {	
-	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
-	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
-	
 	vector<int> randomCells(_cellNum);
 	std::iota (begin(randomCells), end(randomCells), 0); 
 	random_shuffle( randomCells.begin(), randomCells.end() );
@@ -90,13 +89,51 @@ void Partitioner::partition()
 		}
 	}
 	
+	// SA
+	random_shuffle( randomCells.begin(), randomCells.end() );
+	for(int i = 0; i<_cellNum; i++){
+		// check whether moving the cell to the other side can improve the performance
+		int cellID = randomCells[i];
+		vector<int> nets = _cellArray[cellID]->getNetList();
+		int cellPart = _cellArray[cellID]->getPart();
+		int cutChange = 0;
+		for (int j = 0; j < nets.size(); j++){
+			int netID = nets[j];
+			if(_netArray[netID]->getPartCount(cellPart) == 1){
+				cutChange--;
+			}
+			else {
+				cutChange++;
+			}
+		}
+		// decide to move the cell to the other side
+		if((cutChange > 0 || rand()<_rFactor) && balcondition() == 2){
+			
+			int newPart = !cellPart;
+			printf("cell %d move from %d to %d\n", cellID, cellPart, newPart);
+			_cellArray[cellID]->move();
+			for (int j = 0; j < nets.size(); j++){
+				int netID = nets[j];
+				_netArray[netID]->incPartCount(newPart);
+				_netArray[netID]->decPartCount(cellPart);
+			}
+			_partSize[newPart]++;
+			_partSize[cellPart]--;
+		}
+	}
 }
 
 void Partitioner::printSummary() const
 {
+	int cutSize = 0;
+	for (int i = 0; i<_netNum; i++){
+		if(_netArray[i]->getPartCount(0) == 1){
+			cutSize++;
+		}
+	}
     cout << endl;
     cout << "==================== Summary ====================" << endl;
-    cout << " Cutsize: " << _cutSize << endl;
+    cout << " Cutsize: " << cutSize << endl;
     cout << " Total cell number: " << _cellNum << endl;
     cout << " Total net number:  " << _netNum << endl;
     cout << " Cell Number of partition A: " << _partSize[0] << endl;
@@ -158,6 +195,12 @@ void Partitioner::reportNetPart() const
 void Partitioner::writeResult(fstream& outFile)
 {
     stringstream buff;
+	_cutSize = 0;
+	for (int i = 0; i<_netNum; i++){
+		if(_netArray[i]->getPartCount(0) == 1){
+			_cutSize++;
+		}
+	}
     buff << _cutSize;
     outFile << "Cutsize = " << buff.str() << '\n';
     buff.str("");

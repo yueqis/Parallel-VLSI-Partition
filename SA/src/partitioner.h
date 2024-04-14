@@ -14,7 +14,7 @@ class Partitioner
 public:
     // constructor and destructor
     Partitioner(fstream& inFile) :
-        _netNum(0), _cellNum(0), _maxPinNum(0), _bFactor(0), _cutSize(0)
+        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0)
         {
         parseInput(inFile);
         _partSize[0] = _cellNum;
@@ -48,7 +48,6 @@ public:
 	void reportNetPart() const;
 	void ensureCutsize();
 
-	//check balance after moving cell
 
 private:
     int                 _cutSize;       // cut size 
@@ -57,6 +56,7 @@ private:
     int                 _cellNum;       // number of cells
     int                 _maxPinNum;     // Pmax for building bucket list
     double              _bFactor;       // the balance factor to be met
+	double				_rFactor;		// chance to move cell randomly
     vector<Net*>        _netArray;      // net array of the circuit
     vector<Cell*>       _cellArray;     // cell array of the circuit
 	int 				_upperBound;	// maximum number of cells in one partition
