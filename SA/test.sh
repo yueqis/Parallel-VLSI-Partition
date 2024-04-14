@@ -1,0 +1,1 @@
+./bin/fm inputs/input_10_10.txt outputs/output_10_10.txt
