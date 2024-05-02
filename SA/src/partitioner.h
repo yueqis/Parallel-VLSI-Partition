@@ -13,8 +13,8 @@ class Partitioner
 {
 public:
     // constructor and destructor
-    Partitioner(fstream& inFile) :
-        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0)
+    Partitioner(fstream& inFile, int pid, int nproc) :
+        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0), _iterations(10), _pid(pid), _nproc(nproc)
         {
         parseInput(inFile);
         _partSize[0] = _cellNum;
@@ -33,8 +33,9 @@ public:
     // modify method
     void parseInput(fstream& inFile);
     void partition();
+	void initial_partition();
+	void syncCells();
 
-    
     // member functions about reporting
     void printSummary() const;
     void reportNet() const;
@@ -50,6 +51,9 @@ public:
 
 
 private:
+	int 				_pid;			// process id
+	int					_nproc;			// number of processors
+	int 				_iterations;    // number of SA iterations
     int                 _cutSize;       // cut size 
     int                 _partSize[2];   // size (cell number) of partition A(0) and B(1)
     int                 _netNum;        // number of nets
@@ -61,6 +65,8 @@ private:
     vector<Cell*>       _cellArray;     // cell array of the circuit
 	int 				_upperBound;	// maximum number of cells in one partition
 	int 				_lowerBound;	// minimum number of cells in one partition
+	vector<int>			_sortedCells;	// sorted index of cells according to pin number
+	vector<int>			_changedCells;
 	
     // Clean up partitioner
     void clear();

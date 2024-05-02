@@ -1,1 +1,1 @@
-./bin/fm inputs/input_10_10.txt outputs/output_10_10.txt
+mpirun -n 8 ./bin/fm inputs/input_1000_1500.txt outputs/output_1000_1500.txt

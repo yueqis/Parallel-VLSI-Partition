@@ -12,6 +12,7 @@
 #include "cell.h"
 #include "net.h"
 #include "partitioner.h"
+#include <mpi.h>
 using namespace std;
 
 
@@ -51,6 +52,16 @@ void Partitioner::parseInput(fstream& inFile)
 	}
 	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
 	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
+	
+	vector<int> sorted_cells(_cellNum);
+    for (int idx = 0; idx < _cellNum; idx++) {
+        sorted_cells[idx] = idx;
+    }
+    auto compare_pin = [&](int idx1, int idx2) {
+        return _cellArray[idx1]->getPinNum() > _cellArray[idx2]->getPinNum();
+    };
+    sort(sorted_cells.begin(), sorted_cells.end(), compare_pin);
+	_sortedCells = sorted_cells;
     return;
 }
 
@@ -67,8 +78,7 @@ double Partitioner::find_bal()
 	return abs(factor-0.5);
 }
 
-void Partitioner::partition()
-{	
+void Partitioner::initial_partition(){
 	vector<int> randomCells(_cellNum);
 	std::iota (begin(randomCells), end(randomCells), 0); 
 	random_shuffle( randomCells.begin(), randomCells.end() );
@@ -88,39 +98,91 @@ void Partitioner::partition()
 			_cutSize++;
 		}
 	}
-	
+}
+
+void Partitioner::partition()
+{	
 	// SA
-	random_shuffle( randomCells.begin(), randomCells.end() );
-	for(int i = 0; i<_cellNum; i++){
-		// check whether moving the cell to the other side can improve the performance
-		int cellID = randomCells[i];
-		vector<int> nets = _cellArray[cellID]->getNetList();
-		int cellPart = _cellArray[cellID]->getPart();
-		int cutChange = 0;
-		for (int j = 0; j < nets.size(); j++){
-			int netID = nets[j];
-			if(_netArray[netID]->getPartCount(cellPart) == 1){
-				cutChange--;
-			}
-			else {
-				cutChange++;
-			}
-		}
-		// decide to move the cell to the other side
-		if((cutChange > 0 || rand()<_rFactor) && balcondition() == 2){
-			
-			int newPart = !cellPart;
-			printf("cell %d move from %d to %d\n", cellID, cellPart, newPart);
-			_cellArray[cellID]->move();
+	for(int it = 0; it < _iterations; it++){
+		for(int i = _pid; i<_cellNum; i+=_nproc){
+			// check whether moving the cell to the other side can improve the performance
+			int cellID = _sortedCells[i];
+			vector<int> nets = _cellArray[cellID]->getNetList();
+			int cellPart = _cellArray[cellID]->getPart();
+			int cutChange = 0;
 			for (int j = 0; j < nets.size(); j++){
 				int netID = nets[j];
-				_netArray[netID]->incPartCount(newPart);
-				_netArray[netID]->decPartCount(cellPart);
+				if(_netArray[netID]->getPartCount(cellPart) == 1){
+					cutChange--;
+				}
+				else {
+					cutChange++;
+				}
+				//printf("cell %d is part %d: net %d\n", cellID, cellPart, _netArray[netID]->getPartCount(cellPart));
 			}
-			_partSize[newPart]++;
-			_partSize[cellPart]--;
+			// decide to move the cell to the other side
+			
+			if((cutChange < 0 || rand()<_rFactor) && balcondition() == 2){
+				int newPart = !cellPart;
+				//printf("cell %d move from %d to %d\n", cellID, cellPart, newPart);
+				_cellArray[cellID]->move();
+				for (int j = 0; j < nets.size(); j++){
+					int netID = nets[j];
+					_netArray[netID]->incPartCount(newPart);
+					_netArray[netID]->decPartCount(cellPart);
+				}
+				_partSize[newPart]++;
+				_partSize[cellPart]--;
+				_changedCells.push_back(cellID);
+			}
+		}
+		syncCells();
+		_changedCells.clear();
+	}
+	
+}
+
+void Partitioner::syncCells(){
+	int self_changed_num = _changedCells.size();
+	int* message = new int[2*self_changed_num + 1];
+	message[0] = self_changed_num;
+	for (int i = 0; i < self_changed_num; i++) {
+		message[i*2+1] = _changedCells[i];
+		message[i*2+2] = _cellArray[_changedCells[i]]->getPart();
+	}
+	for (int i = 0; i < _nproc; i++) {
+		if (i != _pid) {
+			MPI_Request request_send;
+			MPI_Isend(message, 2*self_changed_num + 1, MPI_INT, i, 1, MPI_COMM_WORLD, &request_send);
+			// fprintf(stderr, "pid %d before send %d\n", pid, message[0]);
+			MPI_Request request_receive;
+			int* received_message = new int[2*(_cellNum/_nproc) + 1];
+			MPI_Irecv(received_message, 2*(_cellNum/_nproc) + 1, MPI_INT, i, MPI_ANY_TAG, MPI_COMM_WORLD, &request_receive);
+			MPI_Wait(&request_send, MPI_STATUS_IGNORE);
+			// fprintf(stderr, "pid %d after wait send\n", pid);
+			MPI_Wait(&request_receive, MPI_STATUS_IGNORE);
+			// fprintf(stderr, "pid %d after wait receive\n", pid);
+			//fprintf(stderr, " pid %d reads num_modified_cells = %d\n", _pid, received_message[0]);
+			int other_changed_num = received_message[0];
+			for (int j = 0; j<other_changed_num; j++){
+					int cellID = received_message[2*j+1];
+					int cellPart = received_message[2*j+2];
+					_cellArray[cellID]->setPart(cellPart);
+					vector<int> nets = _cellArray[cellID]->getNetList();
+					for (int k = 0; k < nets.size(); k++){
+						_netArray[nets[k]]->incPartCount(1);
+						_netArray[nets[k]]->decPartCount(0);
+					}
+					_partSize[!cellPart]--;
+					_partSize[cellPart]++;
+			}
+			if(_pid == 0){
+				cout << i <<" "<< other_changed_num<<endl;
+			}
+			delete[] received_message;
 		}
 	}
+	delete[] message;
 }
 
 void Partitioner::printSummary() const
