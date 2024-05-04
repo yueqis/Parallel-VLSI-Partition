@@ -1,1 +1,1 @@
-./bin/fm inputs/input_10_10.txt outputs/output_10_10.txt
+./bin/fm ../inputs/input_8_7.txt outputs/output_8_7.txt
