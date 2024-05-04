@@ -32,6 +32,9 @@ public:
 
     // modify method
     void parseInput(fstream& inFile);
+    void coarse();
+    void KL();
+    void uncoarse();
     void partition();
 
     

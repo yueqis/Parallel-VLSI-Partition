@@ -14,113 +14,260 @@
 #include "partitioner.h"
 using namespace std;
 
+vector<vector<int>> adj_list;
+vector<vector<int>> adj_list_coarse;
+vector<tuple<int,int>> matching_edge;
+vector<int> map_coarse;
+vector<bool> part0;
+vector<bool> part1;
+vector<bool> part0_coarse;
+vector<bool> part1_coarse;
+int numCell;
+int numEdge;
+int numCell_coarse;
+int numEdge_coarse;
 
 void Partitioner::parseInput(fstream& inFile)
 {
     string str;
     inFile >> str;
-    _cellNum = stod(str);
+    numCell = stod(str);
 	inFile >> str;
-    _netNum = stod(str);
-	for (int i = 0; i<_cellNum; i++){
-		_cellArray.push_back(new Cell(0, i+1)); 
-	}
-	for (int i = 0; i<_netNum; i++){
-		_netArray.push_back(new Net(i)); 
-	}
-	string cell1, cell2;
-	for(int i = 0; i<_netNum; i++) {
-		inFile >> cell1;
-		int cellID1 = stoi(cell1);
-		inFile >> cell2;
-		int cellID2 = stoi(cell2);
+    numEdge = stod(str);
+
+	// create a adjacency list with numCell-many vectors
+	adj_list = vector<vector<int>> (numCell);
+	for(int i = 0; i < numEdge; i++) {
+		inFile >> str;
+		int cellID1 = stoi(str);
+		inFile >> str;
+		int cellID2 = stoi(str);
 		cellID1 --;
 		cellID2 --;
-		_cellArray[cellID1]->addNet(i);
-		_cellArray[cellID1]->incPinNum();
-		if(_cellArray[cellID1]->getPinNum()>_maxPinNum){
-			_maxPinNum=_cellArray[cellID1]->getPinNum();
-		}
-		_cellArray[cellID2]->addNet(i);
-		_cellArray[cellID2]->incPinNum();
-		if(_cellArray[cellID2]->getPinNum()>_maxPinNum){
-			_maxPinNum=_cellArray[cellID2]->getPinNum();
-		}
-		_netArray[i]->addCell(cellID1);
-		_netArray[i]->addCell(cellID2);
+		adj_list[cellID1].push_back(cellID2);
+		adj_list[cellID2].push_back(cellID1);
 	}
-	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
-	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
+
+	// create an initial partition, put even nodes in partition 0 and put odd nodes in partition 1
+	for (int i = 0; i < numCell; i++) {
+		if (i % 2 == 0) {
+			part0.push_back(true);
+			part1.push_back(false);
+		}
+		else {
+			part0.push_back(false);
+			part1.push_back(true);
+		}
+	}
+	cout << "finished parsing input!" << endl;
     return;
 }
 
-int Partitioner::balcondition()
-{
-	if((getPartSize(0)-1)<_lowerBound)return 1;    //search only 1
-	else if((getPartSize(1)-1)<_lowerBound)return 0; //search only 0
-	else return 2; //both sides are okay
+void Partitioner::coarse()
+{	
+	vector<int> matched (numCell, 0);
+	for (int i = 0; i < numCell; i++) {
+		if (matched[i] == 0) {
+			matched[i] = 1;
+			for (int j = 0; j < adj_list[i].size(); j++) {
+				int j_cellID = adj_list[i][j];
+				if (matched[j_cellID] == 0) {
+					matched[j_cellID] = 1; 
+					matching_edge.push_back(make_tuple(i, j_cellID));
+					break;
+				}
+			}
+
+		}
+	}
+	int matching_edge_size = matching_edge.size();
+	numCell_coarse = numCell - matching_edge_size;
+	adj_list_coarse = vector<vector<int>> (numCell_coarse);
+	// mapping uncoarse to coarse
+	map_coarse = vector<int> (numCell);
+	for (int i = 0; i < matching_edge_size; i++) {
+		int cellID1 = std::get<0>(matching_edge[i]);
+		int cellID2 = std::get<1>(matching_edge[i]);
+		map_coarse[cellID1] = i;
+		map_coarse[cellID2] = i;
+	}
+	int idx = matching_edge_size;
+	for (int i = 0; i < numCell; i++) {
+		bool add = true;
+		for (int j = 0; j < matching_edge_size; j++) {
+			int cellID1 = get<0>(matching_edge[j]);
+			int cellID2 = get<1>(matching_edge[j]);
+			if (i == cellID1 || i == cellID2) {
+				add = false;
+				continue;}
+		}
+		if (add) {
+			map_coarse[i] = idx;
+			idx++;
+		}
+	}
+	for (int i = 0; i < matching_edge_size; i++) {
+		int cellID1 = std::get<0>(matching_edge[i]);
+		int cellID2 = std::get<1>(matching_edge[i]);
+		int cellID1_coarse = map_coarse[cellID1];
+		int cellID2_coarse = map_coarse[cellID2];
+		for (int j = 0; j < adj_list[cellID1].size(); j++) {
+			int j_cellID_coarse = map_coarse[adj_list[cellID1][j]];
+			bool add = true;
+			if (j_cellID_coarse == cellID2_coarse) {add = false;} // don't add if its in this cell's group
+			for (int k = 0; k < adj_list_coarse[i].size(); k++) {
+				// don't add if already added previously
+				if (j_cellID_coarse == adj_list_coarse[i][k]) {add = false;}
+			}
+			if (add == true) {
+				adj_list_coarse[i].push_back(j_cellID_coarse);
+			}
+		}
+		for (int j = 0; j < adj_list[cellID2].size(); j++) {
+			int j_cellID_coarse = map_coarse[adj_list[cellID2][j]];
+			bool add = true;
+			if (j_cellID_coarse == cellID2_coarse) {add = false;} // don't add if its in this cell's group
+			for (int k = 0; k < adj_list_coarse[i].size(); k++) {
+				// don't add if already added previously
+				if (j_cellID_coarse == adj_list_coarse[i][k]) {add = false;}
+			}
+			if (add == true) {
+				adj_list_coarse[i].push_back(j_cellID_coarse);
+			}
+		}
+	}
+	for (int i = 0; i < numCell; i++) {
+		if (map_coarse[i] >= matching_edge_size) {
+			for (int j = 0; j < adj_list[i].size(); j++) {
+				int j_coarse = map_coarse[adj_list[i][j]];
+				bool add = true;
+				for (int k = 0; k < adj_list_coarse[map_coarse[i]].size(); k++) {
+					// don't add if already added previously
+					if (j_coarse == adj_list_coarse[map_coarse[i]][k]) {add = false;}
+				}
+				if (add == true) {
+					adj_list_coarse[map_coarse[i]].push_back(j_coarse);
+				}
+			}
+		}
+	}
+	// assignall even numbers to partition 0 adnd odd numbers to partition 1
+	for (int i = 0; i < numCell_coarse; i++) {
+		if (i % 2 == 0) {
+			part0_coarse.push_back(true);
+			part1_coarse.push_back(false);
+		}
+		else {
+			part0_coarse.push_back(false);
+			part1_coarse.push_back(true);
+		}
+	}
+
+	// for (int i = 0; i < numCell; i++) {
+	// 	cout << "i: " << i << "; group: " << map_coarse[i] << endl;
+	// 	for (int j = 0; j < adj_list_coarse[map_coarse[i]].size(); j++) {
+	// 		cout << "j: " << adj_list_coarse[map_coarse[i]][j] << endl;
+	// 	}
+	// }
+	// for (int i = 0; i < numCell_coarse; i++) {
+	// 	for (int j = 0; j < adj_list_coarse[i].size(); j++) {
+	// 		cout << "i: " << i << "; j: " << adj_list_coarse[i][j] << endl;
+	// 	}
+	// }
+	return;
 }
 
-double Partitioner::find_bal()
-{
-	double factor = getPartSize(0)*1.0/(getPartSize(0)+getPartSize(1));
-	return abs(factor-0.5);
+// cite: https://patterns.eecs.berkeley.edu/?page_id=571#2_Kernighan-Lin_Algorithm
+void Partitioner::KL()
+{	
+	map<int, bool> lock; // whether a vertex shouldn't be moved any more
+	while (true) {
+		vector<pair<int, pair<int, int>>> gain_swap; // gain of swapping a pair of vertices + swap a pair of vertices
+		for (int i = 0; i < numCell_coarse / 2; i++) {
+			// Want D[j] = E[j] - I[j] (external cost - internal cost)
+			vector<int> D = vector<int> (numCell_coarse);
+			// pick some random vertex v1
+			for (int v1 = 0; v1 < numCell_coarse; v1++) {
+				int Ev = 0;
+				int Iv = 0;
+				for (int j = 0; j < adj_list_coarse[v1].size(); j++) {
+					int v2 = adj_list_coarse[v1][j];
+					if (part0_coarse[v1] == part0_coarse[v2]) {
+						// v1 and v2 in the same partition -> internal cost
+						Iv += 1;
+					}
+					else {Ev += 1;}
+				}
+				D[v1] = Ev - Iv;
+			}
+
+			vector<pair<int, pair<int, int>>> g;
+			for (int v1 = 0; v1 < numCell_coarse; v1++) {
+				int cost = 0;
+				for (int v2 = 0; v2 < numCell_coarse; v2++) {
+					if (part0_coarse[v1] != part0_coarse[v2]) {
+						for (int j = 0; j < adj_list_coarse[v1].size(); j++) {
+							if (adj_list_coarse[v1][j] == v2) {cost = 1;}
+						}
+						int gain = D[v1] + D[v2] - cost;
+						g.push_back({gain, {v1, v2}});
+					}
+				}
+			}
+			cout<<gain_swap.size()<<"\n";
+			sort(gain_swap.begin(), gain_swap.end(), greater<pair<int, pair<int, int>>> ());
+			for (int i = 0; i < gain_swap.size(); i++) {
+				pair<int, int> pr = gain_swap[i].second;
+				if(!lock.count(pr.first) && !lock.count(pr.second)) {
+					lock[pr.first];
+					lock[pr.second];
+					cout<<pr.first<<" "<<pr.second<<"\n";
+					gain_swap.push_back({gain_swap[i].first, pr});
+					break;
+				}
+			}
+		}
+		sort(gain_swap.begin(), gain_swap.end(), greater<pair<int, pair<int, int>>> ());
+		if (gain_swap.size() <= 0 || gain_swap[0].first <= 0) {break;}
+		int idx = 0;
+		for (int i = 0; i < gain_swap.size(); i++) {
+			if (gain_swap[i].first < 0) {
+				break;
+			}
+			idx++;
+		}
+		if (idx <= 0) {break;}
+		part0_coarse[gain_swap[idx-1].second.first] = !part0_coarse[gain_swap[idx-1].second.first];
+		part0_coarse[gain_swap[idx-1].second.second] = !part0_coarse[gain_swap[idx-1].second.second];
+		part1_coarse[gain_swap[idx-1].second.first] = !part1_coarse[gain_swap[idx-1].second.first];
+		part1_coarse[gain_swap[idx-1].second.second] = !part1_coarse[gain_swap[idx-1].second.second];
+	}
+	return;
 }
 
+void Partitioner::uncoarse() {
+	for (int i = 0; i < part0.size(); i++) {
+		int coarse_idx = map_coarse[i];
+		part0[i] = part0_coarse[coarse_idx];
+		part1[i] = part1_coarse[coarse_idx];
+	}
+
+	for (int i = 0; i < part0_coarse.size(); i++) {
+		cout << i << ": " << part0_coarse[i] << endl;
+	}
+	for (int i = 0; i < part0.size(); i++) {
+		cout << i << ": " << part0[i] << endl;
+	}
+	return;
+}
+
+// cite: https://people.csail.mit.edu/jshun/6886-s18/lectures/lecture13-1.pdf
 void Partitioner::partition()
 {	
-	vector<int> randomCells(_cellNum);
-	std::iota (begin(randomCells), end(randomCells), 0); 
-	random_shuffle( randomCells.begin(), randomCells.end() );
-    for (int i = 0; i<_cellNum/2; i++){
-		int cellID = randomCells[i];
-		_cellArray[cellID]->setPart(1);
-		vector<int> nets = _cellArray[cellID]->getNetList();
-		for (int j = 0; j < nets.size(); j++){
-			_netArray[nets[j]]->incPartCount(1);
-			_netArray[nets[j]]->decPartCount(0);
-		}
-		_partSize[0]--;
-		_partSize[1]++;
-	}
-	for (int i = 0; i<_netNum; i++){
-		if(_netArray[i]->getPartCount(0) == 1){
-			_cutSize++;
-		}
-	}
-	
-	// SA
-	random_shuffle( randomCells.begin(), randomCells.end() );
-	for(int i = 0; i<_cellNum; i++){
-		// check whether moving the cell to the other side can improve the performance
-		int cellID = randomCells[i];
-		vector<int> nets = _cellArray[cellID]->getNetList();
-		int cellPart = _cellArray[cellID]->getPart();
-		int cutChange = 0;
-		for (int j = 0; j < nets.size(); j++){
-			int netID = nets[j];
-			if(_netArray[netID]->getPartCount(cellPart) == 1){
-				cutChange--;
-			}
-			else {
-				cutChange++;
-			}
-		}
-		// decide to move the cell to the other side
-		if((cutChange > 0 || rand()<_rFactor) && balcondition() == 2){
-			
-			int newPart = !cellPart;
-			printf("cell %d move from %d to %d\n", cellID, cellPart, newPart);
-			_cellArray[cellID]->move();
-			for (int j = 0; j < nets.size(); j++){
-				int netID = nets[j];
-				_netArray[netID]->incPartCount(newPart);
-				_netArray[netID]->decPartCount(cellPart);
-			}
-			_partSize[newPart]++;
-			_partSize[cellPart]--;
-		}
-	}
+	coarse();
+	KL();
+	uncoarse();
+	return;
 }
 
 void Partitioner::printSummary() const
@@ -138,6 +285,11 @@ void Partitioner::printSummary() const
     cout << " Total net number:  " << _netNum << endl;
     cout << " Cell Number of partition A: " << _partSize[0] << endl;
     cout << " Cell Number of partition B: " << _partSize[1] << endl;
+	cout << " _maxPinNum: " << _maxPinNum << endl;
+	cout << " _bFactor: " << _bFactor << endl;
+	cout << " _rFactor: " << _rFactor << endl;
+	cout << " _upperBound: " << _upperBound << endl;
+	cout << " _lowerBound: " << _lowerBound << endl;
     cout << "=================================================" << endl;
     cout << endl;
     return;
