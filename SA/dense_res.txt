@@ -1,0 +1,240 @@
+CellNum = 3000 Time taken by 1 threads: 0.036908 seconds
+
+==================== Summary ====================
+ Cutsize: 2391
+ Total cell number: 3000
+ Total net number:  9992
+ Cell Number of partition A: 1599
+ Cell Number of partition B: 1401
+=================================================
+
+CellNum = 3000 Time taken by 2 threads: 0.026151 seconds
+
+==================== Summary ====================
+ Cutsize: 2396
+ Total cell number: 3000
+ Total net number:  9992
+ Cell Number of partition A: 1601
+ Cell Number of partition B: 1399
+=================================================
+
+CellNum = 3000 Time taken by 4 threads: 0.01182 seconds
+
+==================== Summary ====================
+ Cutsize: 2055
+ Total cell number: 3000
+ Total net number:  9992
+ Cell Number of partition A: 1800
+ Cell Number of partition B: 1200
+=================================================
+
+CellNum = 3000 Time taken by 8 threads: 0.012197 seconds
+
+==================== Summary ====================
+ Cutsize: 0
+ Total cell number: 3000
+ Total net number:  9992
+ Cell Number of partition A: 1800
+ Cell Number of partition B: 1200
+=================================================
+
+CellNum = 7000 Time taken by 1 threads: 0.065955 seconds
+
+==================== Summary ====================
+ Cutsize: 4849
+ Total cell number: 7000
+ Total net number:  19856
+ Cell Number of partition A: 3786
+ Cell Number of partition B: 3214
+=================================================
+
+CellNum = 7000 Time taken by 2 threads: 0.040618 seconds
+
+==================== Summary ====================
+ Cutsize: 4693
+ Total cell number: 7000
+ Total net number:  19856
+ Cell Number of partition A: 3838
+ Cell Number of partition B: 3162
+=================================================
+
+CellNum = 7000 Time taken by 4 threads: 0.031019 seconds
+
+==================== Summary ====================
+ Cutsize: 4112
+ Total cell number: 7000
+ Total net number:  19856
+ Cell Number of partition A: 4200
+ Cell Number of partition B: 2800
+=================================================
+
+CellNum = 7000 Time taken by 8 threads: 0.043796 seconds
+
+==================== Summary ====================
+ Cutsize: 0
+ Total cell number: 7000
+ Total net number:  19856
+ Cell Number of partition A: 4200
+ Cell Number of partition B: 2800
+=================================================
+
+CellNum = 66666 Time taken by 1 threads: 2.10522 seconds
+
+==================== Summary ====================
+ Cutsize: 72138
+ Total cell number: 66666
+ Total net number:  296778
+ Cell Number of partition A: 34998
+ Cell Number of partition B: 31668
+=================================================
+
+CellNum = 66666 Time taken by 2 threads: 1.39781 seconds
+
+==================== Summary ====================
+ Cutsize: 72685
+ Total cell number: 66666
+ Total net number:  296778
+ Cell Number of partition A: 34944
+ Cell Number of partition B: 31722
+=================================================
+
+CellNum = 66666 Time taken by 4 threads: 0.926969 seconds
+
+==================== Summary ====================
+ Cutsize: 72685
+ Total cell number: 66666
+ Total net number:  296778
+ Cell Number of partition A: 34944
+ Cell Number of partition B: 31722
+=================================================
+
+CellNum = 66666 Time taken by 8 threads: 0.657026 seconds
+
+==================== Summary ====================
+ Cutsize: 72685
+ Total cell number: 66666
+ Total net number:  296778
+ Cell Number of partition A: 34944
+ Cell Number of partition B: 31722
+=================================================
+
+CellNum = 150750 Time taken by 1 threads: 5.00689 seconds
+
+==================== Summary ====================
+ Cutsize: 119657
+ Total cell number: 150750
+ Total net number:  500002
+ Cell Number of partition A: 81517
+ Cell Number of partition B: 69233
+=================================================
+
+CellNum = 150750 Time taken by 2 threads: 3.03971 seconds
+
+==================== Summary ====================
+ Cutsize: 119848
+ Total cell number: 150750
+ Total net number:  500002
+ Cell Number of partition A: 81329
+ Cell Number of partition B: 69421
+=================================================
+
+CellNum = 150750 Time taken by 4 threads: 1.9308 seconds
+
+==================== Summary ====================
+ Cutsize: 119848
+ Total cell number: 150750
+ Total net number:  500002
+ Cell Number of partition A: 81329
+ Cell Number of partition B: 69421
+=================================================
+
+CellNum = 150750 Time taken by 8 threads: 1.3909 seconds
+
+==================== Summary ====================
+ Cutsize: 119848
+ Total cell number: 150750
+ Total net number:  500002
+ Cell Number of partition A: 81328
+ Cell Number of partition B: 69422
+=================================================
+
+CellNum = 16433 Time taken by 1 threads: 1.094 seconds
+
+==================== Summary ====================
+ Cutsize: 133066
+ Total cell number: 16433
+ Total net number:  520195
+ Cell Number of partition A: 9002
+ Cell Number of partition B: 7431
+=================================================
+
+CellNum = 16433 Time taken by 2 threads: 0.739938 seconds
+
+==================== Summary ====================
+ Cutsize: 130625
+ Total cell number: 16433
+ Total net number:  520195
+ Cell Number of partition A: 9051
+ Cell Number of partition B: 7382
+=================================================
+
+CellNum = 16433 Time taken by 4 threads: 0.542192 seconds
+
+==================== Summary ====================
+ Cutsize: 127728
+ Total cell number: 16433
+ Total net number:  520195
+ Cell Number of partition A: 9009
+ Cell Number of partition B: 7424
+=================================================
+
+CellNum = 16433 Time taken by 8 threads: 0.517337 seconds
+
+==================== Summary ====================
+ Cutsize: 131600
+ Total cell number: 16433
+ Total net number:  520195
+ Cell Number of partition A: 9009
+ Cell Number of partition B: 7424
+=================================================
+
+CellNum = 382489 Time taken by 1 threads: 9.19391 seconds
+
+==================== Summary ====================
+ Cutsize: 118788
+ Total cell number: 382489
+ Total net number:  500003
+ Cell Number of partition A: 215302
+ Cell Number of partition B: 167187
+=================================================
+
+CellNum = 382489 Time taken by 2 threads: 5.54798 seconds
+
+==================== Summary ====================
+ Cutsize: 119014
+ Total cell number: 382489
+ Total net number:  500003
+ Cell Number of partition A: 215609
+ Cell Number of partition B: 166880
+=================================================
+
+CellNum = 382489 Time taken by 4 threads: 3.57969 seconds
+
+==================== Summary ====================
+ Cutsize: 118747
+ Total cell number: 382489
+ Total net number:  500003
+ Cell Number of partition A: 215451
+ Cell Number of partition B: 167038
+=================================================
+
+CellNum = 382489 Time taken by 8 threads: 2.54823 seconds
+
+==================== Summary ====================
+ Cutsize: 118433
+ Total cell number: 382489
+ Total net number:  500003
+ Cell Number of partition A: 215390
+ Cell Number of partition B: 167099
+=================================================
+
