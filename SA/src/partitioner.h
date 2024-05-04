@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <numeric>
+#include <string>
 #include "cell.h"
 #include "net.h"
 using namespace std;
@@ -13,10 +14,15 @@ class Partitioner
 {
 public:
     // constructor and destructor
-    Partitioner(fstream& inFile, int pid, int nproc) :
-        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0), _iterations(10), _pid(pid), _nproc(nproc)
+    Partitioner(fstream& inFile, int pid, int nproc, bool isDense) :
+        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0), _iterations(100), _pid(pid), _nproc(nproc), _isfirst(true)
         {
-        parseInput(inFile);
+		if(isDense){
+			parseDenseInput(inFile);
+		} else {
+			parseUniformInput(inFile);
+		}
+        
         _partSize[0] = _cellNum;
         _partSize[1] = 0;
     }
@@ -31,10 +37,12 @@ public:
     int getPartSize(int part) const { return _partSize[part]; }
 
     // modify method
-    void parseInput(fstream& inFile);
+    void parseUniformInput(fstream& inFile);
+	void parseDenseInput(fstream& inFile);
     void partition();
 	void initial_partition();
 	void syncCells();
+	void reshuffle(int bal_condtion);
 
     // member functions about reporting
     void printSummary() const;
@@ -66,8 +74,8 @@ private:
 	int 				_upperBound;	// maximum number of cells in one partition
 	int 				_lowerBound;	// minimum number of cells in one partition
 	vector<int>			_sortedCells;	// sorted index of cells according to pin number
-	vector<int>			_changedCells;
-	
+	vector<int>			_changedCells;  // the changedcells
+	bool				_isfirst;		// first time to shuffle
     // Clean up partitioner
     void clear();
 };

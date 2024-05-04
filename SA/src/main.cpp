@@ -7,6 +7,13 @@
 
 using namespace std;
 
+string toString(char* a)
+{
+    string s(a);
+    return s;
+}
+ 
+
 int main(int argc, char** argv)
 {
     fstream input, output;
@@ -36,13 +43,19 @@ int main(int argc, char** argv)
         MPI_Finalize();
         exit(EXIT_FAILURE);
     }
-
-    Partitioner* partitioner = new Partitioner(input, pid, nproc);
+	
+	bool isDense = (toString(argv[1]).find("dense") != string::npos)? true:false;
+    Partitioner* partitioner = new Partitioner(input, pid, nproc, isDense);
 	partitioner->initial_partition();
+	auto start = chrono::high_resolution_clock::now();
     partitioner->partition();
 	if (pid == 0) {
+		auto stop = chrono::high_resolution_clock::now();
+		auto duration = duration_cast<chrono::microseconds>(stop - start);
+		cout << "CellNum = "<< partitioner->getCellNum() << " Time taken by " << nproc << " threads: "
+         << duration.count()/1000000.0 << " seconds" << endl; 
 		partitioner->printSummary();
-		partitioner->writeResult(output);
+		//partitioner->writeResult(output);
 	}
     MPI_Finalize();
 }

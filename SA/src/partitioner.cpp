@@ -13,10 +13,12 @@
 #include "net.h"
 #include "partitioner.h"
 #include <mpi.h>
+#include <time.h>
+#define MAXLIMIT 500000
 using namespace std;
 
 
-void Partitioner::parseInput(fstream& inFile)
+void Partitioner::parseUniformInput(fstream& inFile)
 {
     string str;
     inFile >> str;
@@ -52,7 +54,6 @@ void Partitioner::parseInput(fstream& inFile)
 	}
 	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
 	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
-	
 	vector<int> sorted_cells(_cellNum);
     for (int idx = 0; idx < _cellNum; idx++) {
         sorted_cells[idx] = idx;
@@ -63,6 +64,81 @@ void Partitioner::parseInput(fstream& inFile)
     sort(sorted_cells.begin(), sorted_cells.end(), compare_pin);
 	_sortedCells = sorted_cells;
     return;
+}
+
+void Partitioner::parseDenseInput(fstream& inFile)
+{  
+    map<string, int>    _cellName2Id;   
+	string str;
+	inFile >> str;
+	while (inFile >> str && _netNum < MAXLIMIT) {
+        if (str == "NET") {
+            string netName, cellName, tmpCellName = "";
+            inFile >> netName;
+			vector<string> cells;
+            while (inFile >> cellName) {
+                if (cellName == ";") {
+                    break;
+                }
+                else {
+					cells.push_back(cellName);
+                    
+                }
+            }
+            for(int i = 0; i< cells.size(); i++){
+				// a newly seen cell
+				string cellName = cells[i];
+				if (_cellName2Id.count(cellName) == 0) {
+					int cellId = _cellNum;
+					int t_part;
+					if(cellId%2 == 0){		
+						_partSize[0] ++;
+						t_part = 0;
+					} 
+					else{
+						_partSize[1] ++;
+						t_part = 1;
+					}                                  
+					_cellArray.push_back(new Cell(t_part, cellId));
+					_cellName2Id[cellName] = cellId;
+					
+					++_cellNum;
+				}
+				for(int j = 0; j<i; j++) {
+					int cell1 = _cellName2Id[cells[i]];
+					int cell2 = _cellName2Id[cells[j]];
+					_netArray.push_back(new Net(_netNum));
+					_cellArray[cell1]->addNet(_netNum);
+					_cellArray[cell1]->incPinNum();
+					_netArray[_netNum]->addCell(cell1);
+					_netArray[_netNum]->incPartCount(_cellArray[cell1]->getPart());
+					_cellArray[cell2]->addNet(_netNum);
+					_cellArray[cell2]->incPinNum();
+					_netArray[_netNum]->addCell(cell2);
+					_netArray[_netNum]->incPartCount(_cellArray[cell2]->getPart());
+					_netNum++;
+					if(_cellArray[cell1]->getPinNum()>_maxPinNum){
+						_maxPinNum=_cellArray[cell1]->getPinNum();
+					}
+					if(_cellArray[cell2]->getPinNum()>_maxPinNum){
+						_maxPinNum=_cellArray[cell2]->getPinNum();
+					}
+				}
+			}
+        }
+    }
+	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
+	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
+	
+	vector<int> sorted_cells(_cellNum);
+    for (int idx = 0; idx < _cellNum; idx++) {
+        sorted_cells[idx] = idx;
+    }
+    auto compare_pin = [&](int idx1, int idx2) {
+        return _cellArray[idx1]->getPinNum() > _cellArray[idx2]->getPinNum();
+    };
+    sort(sorted_cells.begin(), sorted_cells.end(), compare_pin);
+	_sortedCells = sorted_cells;
 }
 
 int Partitioner::balcondition()
@@ -83,7 +159,7 @@ void Partitioner::initial_partition(){
 	std::iota (begin(randomCells), end(randomCells), 0); 
 	random_shuffle( randomCells.begin(), randomCells.end() );
     for (int i = 0; i<_cellNum/2; i++){
-		int cellID = randomCells[i];
+		int cellID = randomCells[(i*_nproc+1)%_cellNum];
 		_cellArray[cellID]->setPart(1);
 		vector<int> nets = _cellArray[cellID]->getNetList();
 		for (int j = 0; j < nets.size(); j++){
@@ -104,7 +180,7 @@ void Partitioner::partition()
 {	
 	// SA
 	for(int it = 0; it < _iterations; it++){
-		for(int i = _pid; i<_cellNum; i+=_nproc){
+		for(int i = _pid+_nproc; i<_cellNum; i+=_nproc){
 			// check whether moving the cell to the other side can improve the performance
 			int cellID = _sortedCells[i];
 			vector<int> nets = _cellArray[cellID]->getNetList();
@@ -138,6 +214,49 @@ void Partitioner::partition()
 		}
 		syncCells();
 		_changedCells.clear();
+		if(balcondition() != 2 && it != _iterations-1 && rand()<1.0/_nproc){
+			reshuffle(balcondition());
+		}
+		
+		random_shuffle(_sortedCells.begin(), _sortedCells.end() );
+		if (_pid == 0) {
+			//cout << "part count" << _partSize[0] << " " << _partSize[1] << endl;
+		}
+	}
+	
+}
+
+void Partitioner::reshuffle(int bal_condition){
+	int count = 0.2*_cellNum / _nproc;
+	int cellPart = bal_condition;
+	for(int i = 0; i<_cellNum; i++) {
+		int cellID = _sortedCells[(i*_nproc)%_cellNum];
+		if (_cellArray[cellID]->getPart() == cellPart){
+			if(count < 0) break;
+			vector<int> nets = _cellArray[cellID]->getNetList();
+			int cutChange = 0;
+			for (int j = 0; j < nets.size(); j++){
+				int netID = nets[j];
+				if(_netArray[netID]->getPartCount(cellPart) == 1){
+					cutChange--;
+				}
+				else {
+					cutChange++;
+				}
+			}
+			if (cutChange > -2-_nproc) {
+				int newPart = !cellPart;
+				_cellArray[cellID]->move();
+				for (int j = 0; j < nets.size(); j++){
+					int netID = nets[j];
+					_netArray[netID]->incPartCount(newPart);
+					_netArray[netID]->decPartCount(cellPart);
+				}
+				_partSize[newPart]++;
+				_partSize[cellPart]--;
+				count -= 1;
+			}
+		}
 	}
 	
 }
@@ -163,21 +282,25 @@ void Partitioner::syncCells(){
 			MPI_Wait(&request_receive, MPI_STATUS_IGNORE);
 			// fprintf(stderr, "pid %d after wait receive\n", pid);
 			//fprintf(stderr, " pid %d reads num_modified_cells = %d\n", _pid, received_message[0]);
-			int other_changed_num = received_message[0];
-			for (int j = 0; j<other_changed_num; j++){
-					int cellID = received_message[2*j+1];
-					int cellPart = received_message[2*j+2];
-					_cellArray[cellID]->setPart(cellPart);
-					vector<int> nets = _cellArray[cellID]->getNetList();
-					for (int k = 0; k < nets.size(); k++){
-						_netArray[nets[k]]->incPartCount(1);
-						_netArray[nets[k]]->decPartCount(0);
-					}
-					_partSize[!cellPart]--;
-					_partSize[cellPart]++;
+			int other_changed_num = 0;
+			if (request_receive == MPI_SUCCESS) {
+				other_changed_num = received_message[0];
+				for (int j = 0; j<other_changed_num; j++){
+						int cellID = received_message[2*j+1];
+						int cellPart = received_message[2*j+2];
+						_cellArray[cellID]->setPart(cellPart);
+						vector<int> nets = _cellArray[cellID]->getNetList();
+						for (int k = 0; k < nets.size(); k++){
+							_netArray[nets[k]]->incPartCount(1);
+							_netArray[nets[k]]->decPartCount(0);
+						}
+						_partSize[!cellPart]--;
+						_partSize[cellPart]++;
+				}
+				_isfirst = false;
 			}
 			if(_pid == 0){
-				cout << i <<" "<< other_changed_num<<endl;
+				//cout << i <<" "<< other_changed_num<<endl;
 			}
 			delete[] received_message;
 		}
