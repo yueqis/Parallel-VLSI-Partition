@@ -311,9 +311,17 @@ void Partitioner::syncCells(){
 void Partitioner::printSummary() const
 {
 	int cutSize = 0;
-	for (int i = 0; i<_netNum; i++){
-		if(_netArray[i]->getPartCount(0) == 1){
-			cutSize++;
+	for (int cellID = 0; cellID<_cellNum; cellID++){
+		int myPart = _cellArray[cellID]->getPart();
+		vector<int> nets = _cellArray[cellID]->getNetList();
+		for (int j = 0; j < nets.size(); j++){
+			int netID = nets[j];
+			vector<int> cells = _netArray[netID]->getCellList();
+			for (int k = 0; k<2; k++){
+				if (cells[k] != cellID && _cellArray[cells[k]]->getPart() != myPart){
+					cutSize++;
+				}
+			}
 		}
 	}
     cout << endl;
