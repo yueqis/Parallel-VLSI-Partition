@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <random>
 #include <numeric> 
+#include <queue>
 #include "cell.h"
 #include "net.h"
 #include "partitioner.h"
@@ -51,6 +52,8 @@ void Partitioner::parseUniformInput(fstream& inFile)
 		}
 		_netArray[i]->addCell(cellID1);
 		_netArray[i]->addCell(cellID2);
+		_netArray[i]->incPartCount(0);
+		_netArray[i]->incPartCount(0);
 	}
 	_lowerBound =  (int) ceil((1-_bFactor)/2.0 * (getCellNum()));
 	_upperBound =  (int)(1+_bFactor)/2.0 * (getCellNum());
@@ -92,11 +95,11 @@ void Partitioner::parseDenseInput(fstream& inFile)
 					int cellId = _cellNum;
 					int t_part;
 					if(cellId%2 == 0){		
-						_partSize[0] ++;
 						t_part = 0;
 					} 
 					else{
 						_partSize[1] ++;
+						_partSize[0] --;
 						t_part = 1;
 					}                                  
 					_cellArray.push_back(new Cell(t_part, cellId));
@@ -194,13 +197,11 @@ void Partitioner::partition()
 				else {
 					cutChange++;
 				}
-				//printf("cell %d is part %d: net %d\n", cellID, cellPart, _netArray[netID]->getPartCount(cellPart));
 			}
 			// decide to move the cell to the other side
 			
 			if((cutChange < 0 || rand()<_rFactor) && balcondition() == 2){
 				int newPart = !cellPart;
-				//printf("cell %d move from %d to %d\n", cellID, cellPart, newPart);
 				_cellArray[cellID]->move();
 				for (int j = 0; j < nets.size(); j++){
 					int netID = nets[j];
@@ -217,14 +218,48 @@ void Partitioner::partition()
 		if(balcondition() != 2 && it != _iterations-1 && rand()<1.0/_nproc){
 			reshuffle(balcondition());
 		}
-		
 		random_shuffle(_sortedCells.begin(), _sortedCells.end() );
-		if (_pid == 0) {
-			//cout << "part count" << _partSize[0] << " " << _partSize[1] << endl;
-		}
 	}
 	
 }
+
+void Partitioner::cluster()
+{	
+	queue<int> q;
+	vector <int> visited;
+	int current_thread = 0;
+	int count = 0;
+    
+	for (int i = 0; i<_cellNum; i++) {
+		if (_cellArray[i]->getvisited() == false) {
+			_cellArray[i]->setvisited();
+			q.push(i);
+			while(!q.empty()) {
+				int cellID = q.front();
+				_cellArray[cellID]-> setthread(current_thread);
+				if(count > _cellNum/_nproc*1.0) current_thread++;
+				q.pop();
+				vector<int> nets = _cellArray[i]->getNetList();
+				for (int j = 0; j < nets.size(); j++){
+					int netID = nets[j];
+					vector <int> cells = _netArray[netID]->getCellList();
+					for (int k = 0; k<2; k++){
+						if (cells[k] != cellID && _cellArray[i]->getvisited() == false) {
+							q.push(cells[k]);
+							break;
+						}
+					}
+				}
+			}
+		}
+		
+	}
+	for(int i = 0; i<=current_thread; i++){
+		addCluster(i);
+	}
+	
+}
+
 
 void Partitioner::reshuffle(int bal_condition){
 	int count = 0.2*_cellNum / _nproc;
@@ -269,8 +304,9 @@ void Partitioner::syncCells(){
 		message[i*2+1] = _changedCells[i];
 		message[i*2+2] = _cellArray[_changedCells[i]]->getPart();
 	}
+	vector <int> mycluster = getCluster();
 	for (int i = 0; i < _nproc; i++) {
-		if (i != _pid) {
+		if (i != _pid || find(mycluster.begin(), mycluster.end(), i) != mycluster.end()) {
 			MPI_Request request_send;
 			MPI_Isend(message, 2*self_changed_num + 1, MPI_INT, i, 1, MPI_COMM_WORLD, &request_send);
 			// fprintf(stderr, "pid %d before send %d\n", pid, message[0]);
@@ -311,26 +347,22 @@ void Partitioner::syncCells(){
 void Partitioner::printSummary() const
 {
 	int cutSize = 0;
+	for (int netID = 0; netID<_netNum; netID++){
+		vector<int> cells = _netArray[netID]->getCellList();
+		if (_cellArray[cells[0]]->getPart() !=_cellArray[cells[1]]->getPart()){cutSize++;}
+	}
+	int count = 0;
 	for (int cellID = 0; cellID<_cellNum; cellID++){
 		int myPart = _cellArray[cellID]->getPart();
-		vector<int> nets = _cellArray[cellID]->getNetList();
-		for (int j = 0; j < nets.size(); j++){
-			int netID = nets[j];
-			vector<int> cells = _netArray[netID]->getCellList();
-			for (int k = 0; k<2; k++){
-				if (cells[k] != cellID && _cellArray[cells[k]]->getPart() != myPart){
-					cutSize++;
-				}
-			}
-		}
+		if (myPart == 0) count++;
 	}
     cout << endl;
     cout << "==================== Summary ====================" << endl;
     cout << " Cutsize: " << cutSize << endl;
     cout << " Total cell number: " << _cellNum << endl;
     cout << " Total net number:  " << _netNum << endl;
-    cout << " Cell Number of partition A: " << _partSize[0] << endl;
-    cout << " Cell Number of partition B: " << _partSize[1] << endl;
+    cout << " Cell Number of partition A: " << count << endl;
+    cout << " Cell Number of partition B: " << _cellNum-count << endl;
     cout << "=================================================" << endl;
     cout << endl;
     return;

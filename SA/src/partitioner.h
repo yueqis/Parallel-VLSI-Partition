@@ -35,6 +35,7 @@ public:
     int getCellNum() const          { return _cellNum; }
     double getBFactor() const       { return _bFactor; }
     int getPartSize(int part) const { return _partSize[part]; }
+	vector<int> getCluster() const  {return _cluster;}
 
     // modify method
     void parseUniformInput(fstream& inFile);
@@ -43,6 +44,10 @@ public:
 	void initial_partition();
 	void syncCells();
 	void reshuffle(int bal_condtion);
+	void addCluster(int c){
+		_cluster.push_back(c);
+	}
+	void cluster();
 
     // member functions about reporting
     void printSummary() const;
@@ -76,6 +81,7 @@ private:
 	vector<int>			_sortedCells;	// sorted index of cells according to pin number
 	vector<int>			_changedCells;  // the changedcells
 	bool				_isfirst;		// first time to shuffle
+	vector<int>			_cluster;		// its cluster of other threads
     // Clean up partitioner
     void clear();
 };

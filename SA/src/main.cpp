@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 	
 	bool isDense = (toString(argv[1]).find("dense") != string::npos)? true:false;
     Partitioner* partitioner = new Partitioner(input, pid, nproc, isDense);
-	partitioner->initial_partition();
+	if (!isDense) partitioner->initial_partition();	
 	auto start = chrono::high_resolution_clock::now();
     partitioner->partition();
 	if (pid == 0) {
