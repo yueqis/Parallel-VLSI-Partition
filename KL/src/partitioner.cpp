@@ -120,7 +120,7 @@ void Partitioner::coarse()
 			int j_cellID_coarse = map_coarse[adj_list[cellID1][j]];
 			bool add = true;
 			if (j_cellID_coarse == cellID2_coarse) {add = false;} // don't add if its in this cell's group
-			else if ((j_cellID_coarse % _nproc) != _pid) {add = false;} // don't add if this pid is not in charge of this cell
+			// else if ((j_cellID_coarse % _nproc) != _pid) {add = false;} // don't add if this pid is not in charge of this cell
 			else {
 				for (int k = 0; k < adj_list_coarse[i].size(); k++) {
 					// don't add if already added previously
@@ -133,7 +133,7 @@ void Partitioner::coarse()
 			int j_cellID_coarse = map_coarse[adj_list[cellID2][j]];
 			bool add = true;
 			if (j_cellID_coarse == cellID2_coarse) {add = false;} // don't add if its in this cell's group
-			else if ((j_cellID_coarse % _nproc) != _pid) {add = false;} // don't add if this pid is not in charge of this cell
+			// else if ((j_cellID_coarse % _nproc) != _pid) {add = false;} // don't add if this pid is not in charge of this cell
 			else {
 				for (int k = 0; k < adj_list_coarse[i].size(); k++) {
 					// don't add if already added previously
@@ -146,11 +146,13 @@ void Partitioner::coarse()
 
 	// put vertices that are not matched to any other vertex in to adj_list_coarse
 	for (int i = 0; i < numCell; i++) {
-		if ((map_coarse[i] % _nproc) == _pid && map_coarse[i] >= matching_edge_size) {
+		// if ((map_coarse[i] % _nproc) == _pid && map_coarse[i] >= matching_edge_size) {
+		if (map_coarse[i] >= matching_edge_size) {
 			for (int j = 0; j < adj_list[i].size(); j++) {
 				int j_coarse = map_coarse[adj_list[i][j]];
 				bool add = true;
-				if ((j_coarse % _nproc) != _pid) {add = false;}
+				// if ((j_coarse % _nproc) != _pid) {add = false;}
+				if (false) {add = true;}
 				else {
 					for (int k = 0; k < adj_list_coarse[map_coarse[i]].size(); k++) {
 						// don't add if already added previously
@@ -196,7 +198,7 @@ void Partitioner::KL()
 	map<int, bool> lock; // whether a vertex shouldn't be moved any more
 	while (true) {
 		vector<pair<int, pair<int, int>>> gain_swap; // gain of swapping a pair of vertices + swap a pair of vertices
-		for (int i = _pid; i < numCell_coarse / 2; i+=_nproc) {
+		for (int i = _pid; i < numCell_coarse / 2 * _nproc; i+=_nproc) {
 			// Want D[j] = E[j] - I[j] (external cost - internal cost)
 			vector<int> D = vector<int> (numCell_coarse);
 			// pick some random vertex v1
@@ -217,13 +219,14 @@ void Partitioner::KL()
 			vector<pair<int, pair<int, int>>> g;
 			for (int v1 = _pid; v1 < numCell_coarse; v1+=_nproc) {
 				int cost = 0;
-				for (int v2 = _pid; v2 < numCell_coarse; v2+=_nproc) {
+				// for (int v2 = _pid; v2 < numCell_coarse; v2+=_nproc) {
+				for (int v2 = 0; v2 < numCell_coarse; v2+=1) {
 					if (part0_coarse[v1] != part0_coarse[v2]) {
 						for (int j = 0; j < adj_list_coarse[v1].size(); j++) {
 							if (adj_list_coarse[v1][j] == v2) {cost = 1;}
 						}
 						int gain = D[v1] + D[v2] - cost;
-						g.push_back({gain, {v1, v2}});
+						if ((v2 % _nproc) == _pid) {g.push_back({gain, {v1, v2}});}
 					}
 				}
 			}
