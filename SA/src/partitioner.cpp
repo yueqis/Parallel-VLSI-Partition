@@ -215,7 +215,7 @@ void Partitioner::partition()
 		}
 		syncCells();
 		_changedCells.clear();
-		if(balcondition() != 2 && it != _iterations-1 && rand()<1.0/_nproc){
+		if(balcondition() != 2 && it < _iterations-10 && rand()<1.0/_nproc){
 			reshuffle(balcondition());
 		}
 		random_shuffle(_sortedCells.begin(), _sortedCells.end() );
