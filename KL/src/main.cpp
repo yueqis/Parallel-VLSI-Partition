@@ -1,30 +1,50 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <mpi.h>
+#include <chrono>
 #include "partitioner.h"
 using namespace std;
 
 int main(int argc, char** argv)
 {
     fstream input, output;
+    const auto init_start = std::chrono::steady_clock::now();
+    int pid;
+    int nproc;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     if (argc == 3) {
         input.open(argv[1], ios::in);
         output.open(argv[2], ios::out);
         if (!input || !output) {
-            cerr << "Cannot open the input/output file \"" 
+            cerr << "Cannot open the input/output file \""
                  << "\". The program will be terminated..." << endl;
+            MPI_Finalize();
             exit(1);
         }
+
     }
     else {
         cerr << "Usage: ./fm <input file> <output file>" << endl;
+        MPI_Finalize();
         exit(1);
     }
-
-    Partitioner* partitioner = new Partitioner(input);
+    bool isDense = false;
+    Partitioner* partitioner = new Partitioner(input, pid, nproc, isDense);
+    auto start = chrono::high_resolution_clock::now();
     partitioner->partition();
-    partitioner->printSummary();
-    partitioner->writeResult(output);
+    if (pid == 0) {
+		auto stop = chrono::high_resolution_clock::now();
+		auto duration = duration_cast<chrono::microseconds>(stop - start);
+		cout << " Time taken by " << nproc << " threads: "
+         << duration.count()/1000000.0 << " seconds" << endl;
+		partitioner->printSummary();
+        partitioner->writeResult(output);
+	}
+    MPI_Finalize();
     return 0;
 }

@@ -13,8 +13,8 @@ class Partitioner
 {
 public:
     // constructor and destructor
-    Partitioner(fstream& inFile) :
-        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0)
+    Partitioner(fstream& inFile, int pid, int nproc, bool isDense) :
+        _netNum(0), _cellNum(0), _maxPinNum(0), _rFactor(0.1), _bFactor(0.2), _cutSize(0), _pid(pid), _nproc(nproc)
         {
         parseInput(inFile);
         _partSize[0] = _cellNum;
@@ -53,6 +53,8 @@ public:
 
 
 private:
+    int 				_pid;			// process id
+    int					_nproc;			// number of processors
     int                 _cutSize;       // cut size 
     int                 _partSize[2];   // size (cell number) of partition A(0) and B(1)
     int                 _netNum;        // number of nets
