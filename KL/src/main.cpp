@@ -8,7 +8,8 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    fstream input, output;
+    auto initial = chrono::high_resolution_clock::now();
+	fstream input, output;
     const auto init_start = std::chrono::steady_clock::now();
     int pid;
     int nproc;
@@ -39,11 +40,13 @@ int main(int argc, char** argv)
     partitioner->partition();
     if (pid == 0) {
 		auto stop = chrono::high_resolution_clock::now();
-		auto duration = duration_cast<chrono::microseconds>(stop - start);
-		cout << " Time taken by " << nproc << " threads: "
-         << duration.count()/1000000.0 << " seconds" << endl;
+		auto duration1 = duration_cast<chrono::microseconds>(stop - initial);
+		auto duration2 = duration_cast<chrono::microseconds>(stop - start);
+		cout << "CellNum = "<< partitioner->getCellNum() << " Time taken by " << nproc << " threads: " << endl;
+        cout <<  "Computation time = " << duration2.count()/1000000.0 << " seconds" << endl; 
+		cout <<  "Total time = " << duration1.count()/1000000.0 << " seconds" << endl; 
 		partitioner->printSummary();
-        partitioner->writeResult(output);
+		//partitioner->writeResult(output);
 	}
     MPI_Finalize();
     return 0;

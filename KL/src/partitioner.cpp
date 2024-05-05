@@ -61,7 +61,7 @@ void Partitioner::parseInput(fstream& inFile)
 			part1.push_back(true);
 		}
 	}
-	cout << "finished parsing input!" << endl;
+	//cout << "finished parsing input!" << endl;
     return;
 }
 
@@ -194,7 +194,7 @@ void Partitioner::coarse()
 // cite: https://patterns.eecs.berkeley.edu/?page_id=571#2_Kernighan-Lin_Algorithm
 void Partitioner::KL()
 {
-	cout << "KL" << endl;
+	//cout << "KL" << endl;
 	map<int, bool> lock; // whether a vertex shouldn't be moved any more
 	while (true) {
 		vector<pair<int, pair<int, int>>> gain_swap; // gain of swapping a pair of vertices + swap a pair of vertices
@@ -253,7 +253,7 @@ void Partitioner::KL()
 }
 
 void Partitioner::uncoarse() {
-	cout << "uncoarse" << endl;
+	//cout << "uncoarse" << endl;
 	int* message = new int[numCell_coarse];
 	for (int i = 0; i < numCell_coarse; i++) {
 		message[i] = part0_coarse[i];
@@ -293,13 +293,13 @@ void Partitioner::uncoarse() {
 		// for (int i = 0; i < part0_coarse.size(); i++) {
 		// 	cout << i << ": " << part0_coarse[i] << endl;
 		// }
-		cout << "partition A: ";
-		for (int i = 0; i < part0.size(); i++) {
-			if (part0[i] == true) {
-				cout << i << " ";
-			}
-		}
-		cout << endl;
+		// cout << "partition A: ";
+		// for (int i = 0; i < part0.size(); i++) {
+			// if (part0[i] == true) {
+				// cout << i << " ";
+			// }
+		// }
+		// cout << endl;
 	}
 	return;
 }
