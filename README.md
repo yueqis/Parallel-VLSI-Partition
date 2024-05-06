@@ -17,13 +17,13 @@
 * [x] Week 0 (3/18 - 3/24) Brainstorm ideas
 * [x] Week 1 (3/25 - 3/31) Verify our ideas with the professors, and finish drafting the proposal
 * [x] Week 2 (4/1 - 4/7) Draft the starer code for the sequential version of Simulated Annealing and test this baseline performance on CPU
-* [x] Week 3 (4/8 - 4/14) Implement the multilevel partitioning algorithm based on research; finish the milestone report
-* [ ] (4/14 - 4/19) Complete implementation of two MPI parallel algorithms and refine the performance
-* [ ] (4/20 - 4/22) Complete a third version of  MPI parallel algorithm and compare the results
-* [ ] (4/23 - 4/26) Collect the experimental results of all MPI algorithms; Draft the CUDA codes for GPU accelerations
-* [ ] (4/27 - 4/29) Complete implementation of CUDA codes
-* [ ] (4/30 - 5/2) Compare results from different algorithms and different CUDA accelerations; Draft the final report
-* [ ] (5/3 - 5/5) Complete the final report; Prepare for the poster
+* [x] Week 3 (4/8 - 4/14) Implement the KL partitioning algorithm based on research; finish the milestone report
+* [x] (4/14 - 4/19) Complete implementation of two MPI parallel algorithms and refine the performance
+* [x] (4/20 - 4/22) Complete a third version of  MPI parallel algorithm and compare the results
+* [x] (4/23 - 4/26) Collect the experimental results of all MPI algorithms
+* [x] (4/27 - 4/29) Complete implementation of all source code and analysis
+* [x] (4/30 - 5/2) Compare performance results from different algorithms and different speedup; Draft the final report
+* [x] (5/3 - 5/5) Complete the final report; Prepare for the poster
 
 ## Project Summary
 
