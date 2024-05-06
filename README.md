@@ -7,9 +7,10 @@
 
 ## Updates
 
-* [Link to Project](https://github.com/yueqis/Parallel-VLSI-Partition)
+* [Link to Project Webpage](https://github.com/yueqis/Parallel-VLSI-Partition)
 * [Link to Proposal](https://github.com/yueqis/Parallel-VLSI-Partition/blob/main/proposal.pdf)
 * [Link to Milestone Report](https://github.com/yueqis/Parallel-VLSI-Partition/blob/main/Milestone.pdf)
+* [Link to Final Report](https://github.com/yueqis/Parallel-VLSI-Partition/blob/main/final_report.pdf)
 
 ### Schedule
 

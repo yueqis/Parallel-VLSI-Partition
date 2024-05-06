@@ -66,8 +66,22 @@ void Partitioner::parseInput(fstream& inFile)
 }
 
 void Partitioner::coarse()
-{	
-	// Don't coarse
+{
+	vector<int> matched (numCell, 0);
+	for (int i = 0; i < numCell; i++) {
+		if (matched[i] == 0) {
+			matched[i] = 1;
+			for (int j = 0; j < adj_list[i].size(); j++) {
+				int j_cellID = adj_list[i][j];
+				if (matched[j_cellID] == 0) {
+					matched[j_cellID] = 1;
+					matching_edge.push_back(make_tuple(i, j_cellID));
+					break;
+				}
+			}
+
+		}
+	}
 	int matching_edge_size = matching_edge.size();
 	numCell_coarse = numCell - matching_edge_size;
 	adj_list_coarse = vector<vector<int>> (numCell_coarse);
